@@ -1,0 +1,60 @@
+# -------------
+# | Variables |
+# -------------
+[env]
+CARGO_MAKE_EXTEND_WORKSPACE_MAKEFILE = true
+
+# ------------
+# | Wrappers |
+# ------------
+[tasks.fmt]
+command = "cargo"
+args = ["fmt"]
+private = true
+
+[tasks.check]
+command = "cargo"
+args = ["check"]
+private = true
+
+[tasks.clippy]
+command = "cargo"
+args = ["clippy"]
+private = true
+
+[tasks.test]
+command = "cargo"
+args = ["test"]
+private = true
+
+[tasks.bench]
+command = "cargo"
+args = ["bench"]
+private = true
+
+# -------------
+# | Executors |
+# -------------
+[tasks.checkf]
+workspace = false
+dependencies = ["fmt", "check"]
+
+[tasks.checkfc]
+workspace = false
+dependencies = ["fmt", "check", "clippy"]
+
+[tasks.checkall]
+workspace = false
+dependencies = ["fmt", "check", "clippy", "test", "bench"]
+
+[tasks.docs]
+workspace = false
+toolchain = "nightly"
+command = "cargo"
+args = ["doc", "--open", "--document-private-items", "--no-deps"]
+
+[tasks.run]
+workspace = false
+dependencies = ["checkfc"]
+command = "cargo"
+args = ["run", "--bin", "para", "${@}"]
