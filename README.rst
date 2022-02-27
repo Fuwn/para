@@ -6,7 +6,7 @@
 What?
 -----
 
-An example decoder and utility for Flipnote Studios :code:`.ppm` animation format.
+A decoder and utility for the Flipnote Studios :code:`.ppm` animation format.
 
 Why this over that?
 -------------------
