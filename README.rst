@@ -22,11 +22,11 @@ Speed
 
 In a two-hundred-forty-four frame :code:`.ppm` benchmark running the command
 :code:`$ para ./benchmark.ppm gif benchmark.gif` on a twelve-core,
-twenty-four-thread Ryzen 9 processor, para took an average of 22.7000176 seconds,
+twenty-four-thread Ryzen 9 processor, para took an average of 603.3459 milliseconds,
 while ppm-parser took an average of 50.4171397 seconds.
 
 Running the command :code:`$ para ./benchmark.ppm 0 benchmark.png` on a twelve-core,
-twenty-four-thread Ryzen 9 processor, para took an average of 98.7967 milliseconds,
+twenty-four-thread Ryzen 9 processor, para took an average of 8.9794 milliseconds,
 while ppm-parser took an average of 358.2232 milliseconds.
 
 Rust versus Python isn't very fair, however, this benchmark shows the speed improvements
