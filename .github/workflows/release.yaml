@@ -46,5 +46,5 @@ jobs:
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
           asset_path: ./target/release/para
-          asset_name: divina
+          asset_name: para
           asset_content_type: application/x-elf # x-msdownload for Windows
