@@ -7,6 +7,7 @@ use std::{
   collections::HashMap,
   fs,
   io::{Cursor, Read},
+  ops::Generator,
 };
 
 use byteorder::{LittleEndian, ReadBytesExt};
@@ -316,15 +317,13 @@ impl PPMParser {
     self.stream.read_uint::<LittleEndian>(1).unwrap() >> 7 & 0x1 != 0
   }
 
-  fn read_line_types(line_types: Vec<u8>) -> generator::Generator<'static, (), (usize, u8)> {
-    generator::Gn::new_scoped(move |mut s| {
+  fn read_line_types(line_types: Vec<u8>) -> impl Generator<Yield = (usize, u8), Return = ()> {
+    move || {
       for index in 0..192 {
         let line_type = line_types.get(index / 4).unwrap() >> ((index % 4) * 2) & 0x03;
-        s.yield_((index, line_type));
+        yield (index, line_type);
       }
-
-      generator::done!();
-    })
+    }
   }
 
   fn read_frame(&mut self, index: usize) -> &Vec<Vec<Vec<u8>>> {
@@ -370,48 +369,53 @@ impl PPMParser {
     for layer in 0..2 {
       let bitmap = &mut self.layers[layer];
 
-      for (line, line_type) in Self::read_line_types(line_types[layer].clone()) {
-        let mut pixel = 0;
+      {
+        let mut generator = Self::read_line_types(line_types[layer].clone());
+        while let std::ops::GeneratorState::Yielded((line, line_type)) =
+          std::pin::Pin::new(&mut generator).resume(())
+        {
+          let mut pixel = 0;
 
-        // No data stored for this line
-        if line_type == 0 {
-          // pass;
-        } else if line_type == 1 || line_type == 2 {
-          // Compressed line
-          // If `line_type == 2`, the line starts off with all the pixels set to one
-          if line_type == 2 {
-            for i in 0..256 {
-              bitmap[line][i] = 1;
+          // No data stored for this line
+          if line_type == 0 {
+            // pass;
+          } else if line_type == 1 || line_type == 2 {
+            // Compressed line
+            // If `line_type == 2`, the line starts off with all the pixels set to one
+            if line_type == 2 {
+              for i in 0..256 {
+                bitmap[line][i] = 1;
+              }
             }
-          }
 
-          // Unpack chunk usage
-          let mut chunk_usage = self.stream.read_u32::<byteorder::BigEndian>().unwrap();
+            // Unpack chunk usage
+            let mut chunk_usage = self.stream.read_u32::<byteorder::BigEndian>().unwrap();
 
-          // Unpack pixel chunks
-          while pixel < 256 {
-            if chunk_usage & 0x8000_0000 == 0 {
-              pixel += 8;
-            } else {
+            // Unpack pixel chunks
+            while pixel < 256 {
+              if chunk_usage & 0x8000_0000 == 0 {
+                pixel += 8;
+              } else {
+                let chunk = self.stream.read_uint::<LittleEndian>(1).unwrap();
+
+                for bit in 0..8 {
+                  bitmap[line][pixel] = (chunk >> bit & 0x1) as u8;
+                  pixel += 1;
+                }
+              }
+
+              chunk_usage <<= 1;
+            }
+          // Raw line
+          } else if line_type == 3 {
+            // Unpack pixel chunks
+            while pixel < 256 {
               let chunk = self.stream.read_uint::<LittleEndian>(1).unwrap();
 
               for bit in 0..8 {
                 bitmap[line][pixel] = (chunk >> bit & 0x1) as u8;
                 pixel += 1;
               }
-            }
-
-            chunk_usage <<= 1;
-          }
-        // Raw line
-        } else if line_type == 3 {
-          // Unpack pixel chunks
-          while pixel < 256 {
-            let chunk = self.stream.read_uint::<LittleEndian>(1).unwrap();
-
-            for bit in 0..8 {
-              bitmap[line][pixel] = (chunk >> bit & 0x1) as u8;
-              pixel += 1;
             }
           }
         }
