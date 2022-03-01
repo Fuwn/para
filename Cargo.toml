@@ -27,9 +27,6 @@ byteorder = "1.4.3"
 # Time
 chrono = "0.4.19"
 
-# Generators
-generator = "0.7.0"
-
 # Image encoding
 image = "0.24.1"
 
