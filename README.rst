@@ -8,14 +8,14 @@ What?
 
 A decoder and utility for the Flipnote Studios :code:`.ppm` animation format.
 
-Why this over that?
--------------------
+Why this implementation over `the original <https://github.com/Flipnote-Collective/ppm-parser>`_?
+-------------------------------------------------------------------------------------------------
 
 This implementation is
 
-- `SIGNIFICANTLY faster <#speed>`_
-- implemented in safe Rust (a language with strict type-checking!)
-- being actively updated
+- `SIGNIFICANTLY faster <#speed>`_,
+- implemented in safe Rust (a language with strict type-checking!),
+- and being actively updated.
 
 Speed
 ^^^^^
@@ -31,6 +31,14 @@ while ppm-parser took an average of 358.2232 milliseconds.
 
 Rust versus Python isn't very fair, however, this benchmark shows the speed improvements
 that para brings to the table.
+
+Things To Come
+--------------
+
+- Support for other formats (namely :code:`.kwz`)
+- Optimizations here and there
+- Friendlier CLI
+- Possible GUI
 
 Getting up and Running
 ----------------------
