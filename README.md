@@ -42,10 +42,20 @@ that para brings to the table.
 
 ### Installation
 
-Prebuilt binaries for x86_64-based Linux systems and Windows are available in the
+#### Install from [crates.io](https://crates.io/crates/para-cli)
+
+```shell
+$ cargo install para-cli --force
+```
+
+#### Download from releases
+
+Prebuilt binaries for x86_64-based Linux systems are available in the
 [releases](https://github.com/Usugata/para/releases/latest). If you are using
-a different operating system or architecture such as macOS, you'll have to build
-and install the tool yourself!
+a different operating system or architecture such as macOS or Windows; you'll have
+to build and install Para yourself!
+
+#### Install from self-compile
 
 ```shell
 $ cargo install --git https://github.com/Usugata/para --branch main
