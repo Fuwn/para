@@ -317,7 +317,9 @@ impl PPMParser {
     self.stream.read_uint::<LittleEndian>(1).unwrap() >> 7 & 0x1 != 0
   }
 
-  fn read_line_types(line_types: &Vec<u8>) -> impl Generator<Yield = (usize, u8), Return = ()> + '_ {
+  fn read_line_types(
+    #[allow(clippy::ptr_arg)] line_types: &Vec<u8>,
+  ) -> impl Generator<Yield = (usize, u8), Return = ()> + '_ {
     move || {
       for index in 0..192 {
         let line_type = line_types.get(index / 4).unwrap() >> ((index % 4) * 2) & 0x03;
@@ -333,7 +335,7 @@ impl PPMParser {
     }
 
     // Copy the current layer buffers to the previous ones
-    self.prev_layers = self.layers.clone();
+    self.prev_layers.clone_from_slice(&self.layers);
     self.prev_frame_index = index;
     // Clear the current layer buffers by resetting them to zero
     self.layers.fill(vec![vec![0u8; 256]; 192]);
