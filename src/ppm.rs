@@ -317,9 +317,7 @@ impl PPMParser {
     self.stream.read_uint::<LittleEndian>(1).unwrap() >> 7 & 0x1 != 0
   }
 
-  fn read_line_types(
-    #[allow(clippy::ptr_arg)] line_types: &Vec<u8>,
-  ) -> impl Generator<Yield = (usize, u8), Return = ()> + '_ {
+  fn read_line_types(line_types: &[u8]) -> impl Generator<Yield = (usize, u8), Return = ()> + '_ {
     move || {
       for index in 0..192 {
         let line_type = line_types.get(index / 4).unwrap() >> ((index % 4) * 2) & 0x03;
