@@ -1,5 +1,5 @@
 [package]
-name = "para"
+name = "para-cli"
 version = "0.1.0"
 authors = ["Fuwn <contact@fuwn.me>"]
 edition = "2021"
@@ -10,7 +10,10 @@ repository = "https://github.com/Usugata/para"
 license = "MIT"
 keywords = ["ppm", "nintendo-hacking", "flipnote", "flipnotestudio", "nintendo-dsi"]
 categories = ["encoding"]
-publish = false
+
+[[bin]]
+name = "para"
+path = "src/main.rs"
 
 # Slower builds, faster executables
 [profile.release]
