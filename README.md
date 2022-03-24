@@ -45,7 +45,7 @@ that para brings to the table.
 #### Install from [crates.io](https://crates.io/crates/para-cli)
 
 ```shell
-$ cargo install para-cli --force
+$ cargo +nightly install para-cli --force
 ```
 
 #### Download from releases
