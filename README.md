@@ -58,7 +58,7 @@ to build and install Para yourself!
 #### Install from self-compile
 
 ```shell
-$ cargo install --git https://github.com/Usugata/para --branch main
+$ cargo +nightly install --git https://github.com/Usugata/para --branch main
 ```
 
 If you are building and installing yourself, you must have
