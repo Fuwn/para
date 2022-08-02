@@ -7,55 +7,53 @@ use std::{
   collections::HashMap,
   fs,
   io::{Cursor, Read},
+  lazy::SyncLazy,
   ops::Generator,
 };
 
 use byteorder::{LittleEndian, ReadBytesExt};
 use chrono::{DateTime, NaiveDateTime, Utc};
 
-lazy_static::lazy_static! {
-  // Flipnote speed -> frames per second
-  static ref FRAMERATES: HashMap<u8, f64> = {
-    let mut hashmap = HashMap::new();
+/// Flipnote speed -> frames per second
+static FRAMERATES: SyncLazy<HashMap<u8, f64>> = SyncLazy::new(|| {
+  let mut hashmap = HashMap::new();
 
-    hashmap.insert(1, 0.5);
-    hashmap.insert(2, 1.0);
-    hashmap.insert(3, 2.0);
-    hashmap.insert(4, 4.0);
-    hashmap.insert(5, 6.0);
-    hashmap.insert(6, 12.0);
-    hashmap.insert(7, 20.0);
-    hashmap.insert(8, 30.0);
+  hashmap.insert(1, 0.5);
+  hashmap.insert(2, 1.0);
+  hashmap.insert(3, 2.0);
+  hashmap.insert(4, 4.0);
+  hashmap.insert(5, 6.0);
+  hashmap.insert(6, 12.0);
+  hashmap.insert(7, 20.0);
+  hashmap.insert(8, 30.0);
 
-    hashmap
-  };
+  hashmap
+});
 
-  // Thumbnail bitmap RGB colours
-  static ref THUMBNAIL_PALETTE: &'static [(u64, u64, u64)] = &[
-    (0xFF, 0xFF, 0xFF),
-    (0x52, 0x52, 0x52),
-    (0xFF, 0xFF, 0xFF),
-    (0x9C, 0x9C, 0x9C),
-    (0xFF, 0x48, 0x44),
-    (0xC8, 0x51, 0x4F),
-    (0xFF, 0xAD, 0xAC),
-    (0x00, 0xFF, 0x00),
-    (0x48, 0x40, 0xFF),
-    (0x51, 0x4F, 0xB8),
-    (0xAD, 0xAB, 0xFF),
-    (0x00, 0xFF, 0x00),
-    (0xB6, 0x57, 0xB7),
-    (0x00, 0xFF, 0x00),
-    (0x00, 0xFF, 0x00),
-    (0x00, 0xFF, 0x00),
-  ];
-
-  // Frame RGB colours
-  static ref BLACK: (u8, u8, u8) = (0x0E, 0x0E, 0x0E);
-  static ref WHITE: (u8, u8, u8) = (0xFF, 0xFF, 0xFF);
-  static ref BLUE: (u8, u8, u8) = (0x0A, 0x39, 0xFF);
-  static ref RED: (u8, u8, u8) = (0xFF, 0x2A, 0x2A);
-}
+/// Thumbnail bitmap RGB colours
+// const THUMBNAIL_PALETTE: &'static [(u64, u64, u64)] = &[
+//   (0xFF, 0xFF, 0xFF),
+//   (0x52, 0x52, 0x52),
+//   (0xFF, 0xFF, 0xFF),
+//   (0x9C, 0x9C, 0x9C),
+//   (0xFF, 0x48, 0x44),
+//   (0xC8, 0x51, 0x4F),
+//   (0xFF, 0xAD, 0xAC),
+//   (0x00, 0xFF, 0x00),
+//   (0x48, 0x40, 0xFF),
+//   (0x51, 0x4F, 0xB8),
+//   (0xAD, 0xAB, 0xFF),
+//   (0x00, 0xFF, 0x00),
+//   (0xB6, 0x57, 0xB7),
+//   (0x00, 0xFF, 0x00),
+//   (0x00, 0xFF, 0x00),
+//   (0x00, 0xFF, 0x00),
+// ];
+// Frame RGB colours
+const BLACK: (u8, u8, u8) = (0x0E, 0x0E, 0x0E);
+const WHITE: (u8, u8, u8) = (0xFF, 0xFF, 0xFF);
+const BLUE: (u8, u8, u8) = (0x0A, 0x39, 0xFF);
+const RED: (u8, u8, u8) = (0xFF, 0x2A, 0x2A);
 
 macro read_n_to_as_utf8_from_stream($n:expr, $from:ident) {
   String::from_utf8({
@@ -467,13 +465,13 @@ impl PPMParser {
     let paper_colour = header & 0x1;
     let pen = vec![
       None,
-      Some(if paper_colour == 1 { *BLACK } else { *WHITE }),
-      Some(*RED),
-      Some(*BLUE),
+      Some(if paper_colour == 1 { BLACK } else { WHITE }),
+      Some(RED),
+      Some(BLUE),
     ];
 
     vec![
-      if paper_colour == 1 { *WHITE } else { *BLACK },
+      if paper_colour == 1 { WHITE } else { BLACK },
       pen.get(((header >> 1) & 0x3) as usize).unwrap().unwrap(), // Layer one colour
       pen.get(((header >> 3) & 0x3) as usize).unwrap().unwrap(), // Layer two colour
     ]

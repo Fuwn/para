@@ -21,9 +21,6 @@ lto = "fat"
 codegen-units = 1
 
 [dependencies]
-# Constant `HashMap`
-lazy_static = "1.4.0"
-
 # Byte manipulation
 byteorder = "1.4.3"
 
