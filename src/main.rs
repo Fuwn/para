@@ -1,7 +1,6 @@
 // Copyright (C) 2022-2022 Fuwn <contact@fuwn.me>
 // SPDX-License-Identifier: MIT
 
-#![feature(decl_macro, generators, generator_trait, once_cell)]
 #![deny(
   warnings,
   nonstandard_style,
@@ -13,13 +12,13 @@
 #![deny(clippy::all, clippy::nursery, clippy::pedantic)]
 #![recursion_limit = "128"]
 
-mod ppm;
-
 use std::process::exit;
 
 use image::DynamicImage;
 
-use crate::ppm::PPMParser;
+use ppm::PPMParser;
+
+mod ppm;
 
 #[allow(unused)]
 fn get_image(parser: &mut PPMParser, index: usize) -> DynamicImage {
@@ -45,9 +44,9 @@ fn get_image(parser: &mut PPMParser, index: usize) -> DynamicImage {
 
 fn main() {
   human_panic::setup_panic!(Metadata {
-    version:  env!("CARGO_PKG_VERSION").into(),
-    name:     env!("CARGO_PKG_NAME").into(),
-    authors:  env!("CARGO_PKG_AUTHORS").into(),
+    version: env!("CARGO_PKG_VERSION").into(),
+    name: env!("CARGO_PKG_NAME").into(),
+    authors: env!("CARGO_PKG_AUTHORS").into(),
     homepage: env!("CARGO_PKG_HOMEPAGE").into(),
   });
 
@@ -99,9 +98,7 @@ fn main() {
           .encode_frame(image::Frame::new(frame.into_rgba8()))
           .unwrap();
       }
-      gif_encoder
-        .set_repeat(image::codecs::gif::Repeat::Infinite)
-        .unwrap();
+      gif_encoder.set_repeat(image::codecs::gif::Repeat::Infinite).unwrap();
     }
     "thumb" => {
       let thumb_index = parser.get_thumb_index() as usize;
@@ -125,5 +122,5 @@ fn main() {
     }
   }
 
-  println!("converted {}({}) to {}", path, index, out_path);
+  println!("converted {path}({index}) to {out_path}");
 }

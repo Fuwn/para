@@ -5,17 +5,17 @@
 
 use std::{
   collections::HashMap,
+  fmt::Write,
   fs,
   io::{Cursor, Read},
-  lazy::SyncLazy,
-  ops::Generator,
 };
 
 use byteorder::{LittleEndian, ReadBytesExt};
-use chrono::{DateTime, NaiveDateTime, Utc};
+use chrono::{DateTime, Duration, TimeZone, Utc};
+use once_cell::sync::Lazy;
 
 /// Flipnote speed -> frames per second
-static FRAMERATES: SyncLazy<HashMap<u8, f64>> = SyncLazy::new(|| {
+static FRAMERATES: Lazy<HashMap<u8, f64>> = Lazy::new(|| {
   let mut hashmap = HashMap::new();
 
   hashmap.insert(1, 0.5);
@@ -55,26 +55,32 @@ const WHITE: (u8, u8, u8) = (0xFF, 0xFF, 0xFF);
 const BLUE: (u8, u8, u8) = (0x0A, 0x39, 0xFF);
 const RED: (u8, u8, u8) = (0xFF, 0x2A, 0x2A);
 
-macro read_n_to_as_utf8_from_stream($n:expr, $from:ident) {
-  String::from_utf8({
-    let mut buffer = vec![0; $n];
+macro_rules! read_n_to_as_utf8_from_stream {
+  ($n:expr, $from:ident) => {{
+    String::from_utf8({
+      let mut buffer = vec![0; $n];
+
+      $from.stream.read_exact(&mut buffer).unwrap();
+
+      buffer
+    })
+    .unwrap()
+  }};
+}
+
+macro_rules! read_n_of_size_from_to_vec {
+  ($n:expr, $from:tt, $size:ty) => {{
+    let mut buffer = vec![0 as $size; $n];
 
     $from.stream.read_exact(&mut buffer).unwrap();
 
     buffer
-  })
-  .unwrap()
+  }};
 }
 
-macro read_n_of_size_from_to_vec($n:expr, $from:tt, $size:ty) {{
-  let mut buffer = vec![0 as $size; $n];
-
-  $from.stream.read_exact(&mut buffer).unwrap();
-
-  buffer
-}}
-
-fn strip_null(string: &str) -> String { string.replace(char::from(0), "") }
+fn strip_null(string: &str) -> String {
+  string.replace(char::from(0), "")
+}
 
 fn read_n_to_vec(stream: &mut Cursor<Vec<u8>>, n: usize) -> Vec<u8> {
   let mut buffer = vec![0; n];
@@ -85,45 +91,77 @@ fn read_n_to_vec(stream: &mut Cursor<Vec<u8>>, n: usize) -> Vec<u8> {
 }
 
 fn vec_u8_to_string(vec: &[u8]) -> String {
-  vec.iter().rev().map(|m| format!("{:02X}", m)).collect()
+  let mut s = String::with_capacity(2 * vec.len());
+  for m in vec.iter().rev() {
+    write!(&mut s, "{m:02X}").unwrap();
+  }
+  s
+}
+
+pub struct LineTypesReader<'slice> {
+  data: &'slice [u8],
+  offset: usize,
+}
+
+impl<'slice> LineTypesReader<'slice> {
+  pub const fn new(data: &'slice [u8]) -> Self {
+    Self { data, offset: 0 }
+  }
+}
+
+impl<'slice> Iterator for LineTypesReader<'slice> {
+  type Item = (usize, u8);
+
+  fn next(&mut self) -> Option<Self::Item> {
+    if self.offset >= 192 {
+      return None;
+    }
+
+    // we're just going to unwrap anyway so there's no point to using
+    // `get` here. fix it if that ever changes
+    let out = (
+      self.offset,
+      self.data[self.offset / 4] >> ((self.offset % 4) * 2) & 0b0000_0011,
+    );
+
+    self.offset += 1;
+    Some(out)
+  }
 }
 
 pub struct PPMParser {
-  stream:              Cursor<Vec<u8>>,
-  layers:              Vec<Vec<Vec<u8>>>,
-  prev_layers:         Vec<Vec<Vec<u8>>>,
-  prev_frame_index:    usize,
+  stream: Cursor<Vec<u8>>,
+  layers: Vec<Vec<Vec<u8>>>,
+  prev_layers: Vec<Vec<Vec<u8>>>,
+  prev_frame_index: usize,
   animation_data_size: u32,
-  sound_data_size:     u32,
-  frame_count:         u16,
-  lock:                u16,
-  thumb_index:         u16,
-  root_author_name:    String,
-  parent_author_name:  String,
+  sound_data_size: u32,
+  frame_count: u16,
+  lock: u16,
+  thumb_index: u16,
+  root_author_name: String,
+  parent_author_name: String,
   current_author_name: String,
-  parent_author_id:    String,
-  current_author_id:   String,
-  parent_filename:     String,
-  current_filename:    String,
-  root_author_id:      String,
-  partial_filename:    String,
-  timestamp:           DateTime<Utc>,
-  layer_1_visible:     bool,
-  layer_2_visible:     bool,
-  loop_:               bool,
-  frame_speed:         u8,
-  bgm_speed:           u8,
-  framerate:           f64,
-  bgm_framerate:       f64,
-  offset_table:        Vec<u32>,
+  parent_author_id: String,
+  current_author_id: String,
+  parent_filename: String,
+  current_filename: String,
+  root_author_id: String,
+  partial_filename: String,
+  timestamp: DateTime<Utc>,
+  layer_1_visible: bool,
+  layer_2_visible: bool,
+  loop_: bool,
+  frame_speed: u8,
+  bgm_speed: u8,
+  framerate: f64,
+  bgm_framerate: f64,
+  offset_table: Vec<u32>,
 }
 impl PPMParser {
   #[allow(unused)]
   pub fn new(stream: Vec<u8>) -> Self {
-    Self {
-      stream: Cursor::new(stream),
-      ..Self::default()
-    }
+    Self { stream: Cursor::new(stream), ..Self::default() }
   }
 
   pub fn new_from_file(file: &str) -> Self {
@@ -167,6 +205,11 @@ impl PPMParser {
     // - thirteen-character `String`
     // - `u16` edit counter
     let mac = read_n_to_vec(&mut self.stream, 3);
+    let mut mac_string = String::with_capacity(2 * mac.len());
+    for m in mac {
+      write!(&mut mac_string, "{m:02X}").unwrap();
+    }
+
     let ident = read_n_to_vec(&mut self.stream, 13)
       .into_iter()
       .map(|c| c as char)
@@ -180,10 +223,7 @@ impl PPMParser {
     // Example: F78DA8_14768882B56B8_030
     format!(
       "{}_{}_{:#03}",
-      mac
-        .into_iter()
-        .map(|m| format!("{:02X}", m))
-        .collect::<String>(),
+      mac_string,
       String::from_utf8(ident.as_bytes().to_vec()).unwrap(),
       edits,
     )
@@ -197,24 +237,29 @@ impl PPMParser {
 
     self.lock = self.stream.read_u16::<LittleEndian>().unwrap();
     self.thumb_index = self.stream.read_u16::<LittleEndian>().unwrap();
-    self.root_author_name = strip_null(&read_n_to_as_utf8_from_stream!(22, self));
-    self.parent_author_name = strip_null(&read_n_to_as_utf8_from_stream!(22, self));
-    self.current_author_name = strip_null(&read_n_to_as_utf8_from_stream!(22, self));
-    self.parent_author_id = vec_u8_to_string(read_n_to_vec(&mut self.stream, 8).as_mut_slice());
-    self.current_author_id = vec_u8_to_string(read_n_to_vec(&mut self.stream, 8).as_mut_slice());
+    self.root_author_name =
+      strip_null(&read_n_to_as_utf8_from_stream!(22, self));
+    self.parent_author_name =
+      strip_null(&read_n_to_as_utf8_from_stream!(22, self));
+    self.current_author_name =
+      strip_null(&read_n_to_as_utf8_from_stream!(22, self));
+    self.parent_author_id =
+      vec_u8_to_string(read_n_to_vec(&mut self.stream, 8).as_mut_slice());
+    self.current_author_id =
+      vec_u8_to_string(read_n_to_vec(&mut self.stream, 8).as_mut_slice());
     self.parent_filename = self.read_filename();
     self.current_filename = self.read_filename();
-    self.root_author_id = vec_u8_to_string(read_n_to_vec(&mut self.stream, 8).as_mut_slice());
-    self.partial_filename = vec_u8_to_string(read_n_to_vec(&mut self.stream, 8).as_slice()); // Not really useful for anything
+    self.root_author_id =
+      vec_u8_to_string(read_n_to_vec(&mut self.stream, 8).as_mut_slice());
+    self.partial_filename =
+      vec_u8_to_string(read_n_to_vec(&mut self.stream, 8).as_slice()); // Not really useful for anything
 
     // Timestamp is stored as the number of seconds since 2000, January, 1st
     let timestamp = self.stream.read_u32::<LittleEndian>().unwrap();
-    self.timestamp = DateTime::from_utc(
-      // We add 946684800 to convert this to a more common Unix timestamp,
-      // which starts on 1970, January, 1st
-      NaiveDateTime::from_timestamp(i64::from(timestamp) + 946_684_800, 0),
-      Utc,
-    );
+    // We add 946684800 to convert this to a more common Unix timestamp,
+    // which starts on 1970, January, 1st
+    self.timestamp = Utc.timestamp_opt(946_684_800, 0).unwrap()
+      + Duration::seconds(timestamp.into());
   }
 
   #[allow(unused)]
@@ -286,7 +331,8 @@ impl PPMParser {
     // offset = frame data offset + frame data length + sound effect flags
     //
     // <https://github.com/pbsds/hatena-server/wiki/PPM-format#sound-data-section>
-    let mut offset = 0x06A0 + self.animation_data_size + u32::from(self.frame_count);
+    let mut offset =
+      0x06A0 + self.animation_data_size + u32::from(self.frame_count);
     if offset % 2 != 0 {
       // Account for multiple-of-four padding
       offset += 4 - (offset % 4);
@@ -308,25 +354,17 @@ impl PPMParser {
   }
 
   fn frame_is_new(&mut self, index: usize) -> bool {
-    self
-      .stream
-      .set_position(u64::from(*self.offset_table.get(index).unwrap()));
+    self.stream.set_position(u64::from(*self.offset_table.get(index).unwrap()));
 
     self.stream.read_uint::<LittleEndian>(1).unwrap() >> 7 & 0x1 != 0
   }
 
-  fn read_line_types(line_types: &[u8]) -> impl Generator<Yield = (usize, u8), Return = ()> + '_ {
-    move || {
-      for index in 0..192 {
-        let line_type = line_types.get(index / 4).unwrap() >> ((index % 4) * 2) & 0x03;
-        yield (index, line_type);
-      }
-    }
-  }
-
   fn read_frame(&mut self, index: usize) -> &Vec<Vec<Vec<u8>>> {
     // Decode the previous frames if needed
-    if index != 0 && self.prev_frame_index != index - 1 && !self.frame_is_new(index) {
+    if index != 0
+      && self.prev_frame_index != index - 1
+      && !self.frame_is_new(index)
+    {
       self.read_frame(index - 1);
     }
 
@@ -337,25 +375,17 @@ impl PPMParser {
     self.layers.fill(vec![vec![0u8; 256]; 192]);
 
     // Seek to the frame offset so we can start reading
-    self
-      .stream
-      .set_position(u64::from(*self.offset_table.get(index).unwrap()));
+    self.stream.set_position(u64::from(*self.offset_table.get(index).unwrap()));
 
     // Unpack frame header flags
     let header = self.stream.read_uint::<LittleEndian>(1).unwrap();
     let is_new_frame = (header >> 7) & 0x01 != 0;
     let is_translated = (header >> 5) & 0x03 != 0;
     // If the frame is translated, we need to unpack the x and y values
-    let translation_x = if is_translated {
-      self.stream.read_i8().unwrap()
-    } else {
-      0
-    };
-    let translation_y = if is_translated {
-      self.stream.read_i8().unwrap()
-    } else {
-      0
-    };
+    let translation_x =
+      if is_translated { self.stream.read_i8().unwrap() } else { 0 };
+    let translation_y =
+      if is_translated { self.stream.read_i8().unwrap() } else { 0 };
     // Read line encoding bytes
     let line_types = vec![
       read_n_of_size_from_to_vec!(48, self, u8),
@@ -368,10 +398,7 @@ impl PPMParser {
       let bitmap = &mut self.layers[layer];
 
       {
-        let mut generator = Self::read_line_types(&line_types[layer]);
-        while let std::ops::GeneratorState::Yielded((line, line_type)) =
-          std::pin::Pin::new(&mut generator).resume(())
-        {
+        for (line, line_type) in LineTypesReader::new(&line_types[layer]) {
           let mut pixel = 0;
 
           // No data stored for this line
@@ -387,7 +414,8 @@ impl PPMParser {
             }
 
             // Unpack chunk usage
-            let mut chunk_usage = self.stream.read_u32::<byteorder::BigEndian>().unwrap();
+            let mut chunk_usage =
+              self.stream.read_u32::<byteorder::BigEndian>().unwrap();
 
             // Unpack pixel chunks
             while pixel < 256 {
@@ -447,10 +475,10 @@ impl PPMParser {
           }
 
           // Diff pixels with a binary XOR
-          self.layers[0][y][x] ^=
-            self.prev_layers[0][y - translation_y as usize][x - translation_x as usize];
-          self.layers[1][y][x] ^=
-            self.prev_layers[1][y - translation_y as usize][x - translation_x as usize];
+          self.layers[0][y][x] ^= self.prev_layers[0]
+            [y - translation_y as usize][x - translation_x as usize];
+          self.layers[1][y][x] ^= self.prev_layers[1]
+            [y - translation_y as usize][x - translation_x as usize];
         }
       }
     }
@@ -463,7 +491,7 @@ impl PPMParser {
 
     let header = self.stream.read_uint::<LittleEndian>(1).unwrap();
     let paper_colour = header & 0x1;
-    let pen = vec![
+    let pen = [
       None,
       Some(if paper_colour == 1 { BLACK } else { WHITE }),
       Some(RED),
@@ -495,11 +523,17 @@ impl PPMParser {
     pixels
   }
 
-  pub const fn get_frame_count(&self) -> u16 { self.frame_count }
+  pub const fn get_frame_count(&self) -> u16 {
+    self.frame_count
+  }
 
-  pub const fn get_thumb_index(&self) -> u16 { self.thumb_index }
+  pub const fn get_thumb_index(&self) -> u16 {
+    self.thumb_index
+  }
 
-  pub const fn get_framerate(&self) -> f64 { self.framerate }
+  pub const fn get_framerate(&self) -> f64 {
+    self.framerate
+  }
 
   pub fn dump_to_json(&self, filename: &str) {
     let writer = std::io::BufWriter::new(fs::File::create(filename).unwrap());
@@ -536,33 +570,33 @@ impl PPMParser {
 impl Default for PPMParser {
   fn default() -> Self {
     Self {
-      stream:              Cursor::default(),
-      layers:              Vec::new(),
-      prev_layers:         Vec::new(),
-      prev_frame_index:    Default::default(),
+      stream: Cursor::default(),
+      layers: Vec::new(),
+      prev_layers: Vec::new(),
+      prev_frame_index: Default::default(),
       animation_data_size: Default::default(),
-      sound_data_size:     Default::default(),
-      frame_count:         Default::default(),
-      lock:                Default::default(),
-      thumb_index:         Default::default(),
-      root_author_name:    String::default(),
-      parent_author_name:  String::default(),
+      sound_data_size: Default::default(),
+      frame_count: Default::default(),
+      lock: Default::default(),
+      thumb_index: Default::default(),
+      root_author_name: String::default(),
+      parent_author_name: String::default(),
       current_author_name: String::default(),
-      parent_author_id:    String::default(),
-      current_author_id:   String::default(),
-      parent_filename:     String::default(),
-      current_filename:    String::default(),
-      root_author_id:      String::default(),
-      partial_filename:    String::default(),
-      timestamp:           DateTime::from_utc(NaiveDateTime::from_timestamp(0, 0), Utc),
-      layer_1_visible:     Default::default(),
-      layer_2_visible:     Default::default(),
-      loop_:               Default::default(),
-      frame_speed:         Default::default(),
-      bgm_speed:           Default::default(),
-      framerate:           Default::default(),
-      bgm_framerate:       Default::default(),
-      offset_table:        Vec::default(),
+      parent_author_id: String::default(),
+      current_author_id: String::default(),
+      parent_filename: String::default(),
+      current_filename: String::default(),
+      root_author_id: String::default(),
+      partial_filename: String::default(),
+      timestamp: Utc.timestamp_opt(946_706_400, 0).unwrap(),
+      layer_1_visible: Default::default(),
+      layer_2_visible: Default::default(),
+      loop_: Default::default(),
+      frame_speed: Default::default(),
+      bgm_speed: Default::default(),
+      framerate: Default::default(),
+      bgm_framerate: Default::default(),
+      offset_table: Vec::default(),
     }
   }
 }
