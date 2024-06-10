@@ -1,7 +1,7 @@
 // Copyright (C) 2022-2022 Fuwn <contact@fuwn.me>
 // SPDX-License-Identifier: MIT
 
-#![feature(decl_macro, generators, generator_trait, lazy_cell)]
+#![feature(decl_macro, coroutines, coroutine_trait)]
 #![deny(
   warnings,
   nonstandard_style,
