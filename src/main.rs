@@ -15,11 +15,7 @@
 
 mod ppm;
 
-use std::process::exit;
-
-use image::DynamicImage;
-
-use crate::ppm::PPMParser;
+use {crate::ppm::PPMParser, image::DynamicImage, std::process::exit};
 
 #[allow(unused)]
 fn get_image(parser: &mut PPMParser, index: usize) -> DynamicImage {
@@ -99,9 +95,7 @@ fn main() {
           .encode_frame(image::Frame::new(frame.into_rgba8()))
           .unwrap();
       }
-      gif_encoder
-        .set_repeat(image::codecs::gif::Repeat::Infinite)
-        .unwrap();
+      gif_encoder.set_repeat(image::codecs::gif::Repeat::Infinite).unwrap();
     }
     "thumb" => {
       let thumb_index = parser.get_thumb_index() as usize;

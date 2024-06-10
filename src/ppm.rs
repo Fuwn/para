@@ -3,16 +3,17 @@
 
 #![allow(clippy::cast_sign_loss)]
 
-use std::{
-  collections::HashMap,
-  fs,
-  io::{Cursor, Read},
-  ops::Generator,
-  sync::OnceLock,
+use {
+  byteorder::{LittleEndian, ReadBytesExt},
+  chrono::{DateTime, NaiveDateTime, TimeZone, Utc},
+  std::{
+    collections::HashMap,
+    fs,
+    io::{Cursor, Read},
+    ops::Generator,
+    sync::OnceLock,
+  },
 };
-
-use byteorder::{LittleEndian, ReadBytesExt};
-use chrono::{DateTime, NaiveDateTime, TimeZone, Utc};
 
 /// Flipnote speed -> frames per second
 fn framerates() -> &'static HashMap<u8, f64> {
@@ -124,10 +125,7 @@ pub struct PPMParser {
 impl PPMParser {
   #[allow(unused)]
   pub fn new(stream: Vec<u8>) -> Self {
-    Self {
-      stream: Cursor::new(stream),
-      ..Self::default()
-    }
+    Self { stream: Cursor::new(stream), ..Self::default() }
   }
 
   pub fn new_from_file(file: &str) -> Self {
@@ -167,7 +165,8 @@ impl PPMParser {
   fn read_filename(&mut self) -> String {
     // Parent and current filenames are stored as:
     //
-    // - three bytes representing the last six digits of the console's MAC address
+    // - three bytes representing the last six digits of the console's MAC
+    //   address
     // - thirteen-character `String`
     // - `u16` edit counter
     let mac = read_n_to_vec(&mut self.stream, 3);
@@ -178,16 +177,13 @@ impl PPMParser {
     let edits = self.stream.read_u16::<LittleEndian>().unwrap();
 
     // Filenames are formatted as
-    // <three-byte MAC as hexadecimal>_<thirteen-character string>_<edit counter as
-    // three-digit number>
+    // <three-byte MAC as hexadecimal>_<thirteen-character string>_<edit counter
+    // as three-digit number>
     //
     // Example: F78DA8_14768882B56B8_030
     format!(
       "{}_{}_{:#03}",
-      mac
-        .into_iter()
-        .map(|m| format!("{:02X}", m))
-        .collect::<String>(),
+      mac.into_iter().map(|m| format!("{:02X}", m)).collect::<String>(),
       String::from_utf8(ident.as_bytes().to_vec()).unwrap(),
       edits,
     )
@@ -201,15 +197,22 @@ impl PPMParser {
 
     self.lock = self.stream.read_u16::<LittleEndian>().unwrap();
     self.thumb_index = self.stream.read_u16::<LittleEndian>().unwrap();
-    self.root_author_name = strip_null(&read_n_to_as_utf8_from_stream!(22, self));
-    self.parent_author_name = strip_null(&read_n_to_as_utf8_from_stream!(22, self));
-    self.current_author_name = strip_null(&read_n_to_as_utf8_from_stream!(22, self));
-    self.parent_author_id = vec_u8_to_string(read_n_to_vec(&mut self.stream, 8).as_mut_slice());
-    self.current_author_id = vec_u8_to_string(read_n_to_vec(&mut self.stream, 8).as_mut_slice());
+    self.root_author_name =
+      strip_null(&read_n_to_as_utf8_from_stream!(22, self));
+    self.parent_author_name =
+      strip_null(&read_n_to_as_utf8_from_stream!(22, self));
+    self.current_author_name =
+      strip_null(&read_n_to_as_utf8_from_stream!(22, self));
+    self.parent_author_id =
+      vec_u8_to_string(read_n_to_vec(&mut self.stream, 8).as_mut_slice());
+    self.current_author_id =
+      vec_u8_to_string(read_n_to_vec(&mut self.stream, 8).as_mut_slice());
     self.parent_filename = self.read_filename();
     self.current_filename = self.read_filename();
-    self.root_author_id = vec_u8_to_string(read_n_to_vec(&mut self.stream, 8).as_mut_slice());
-    self.partial_filename = vec_u8_to_string(read_n_to_vec(&mut self.stream, 8).as_slice()); // Not really useful for anything
+    self.root_author_id =
+      vec_u8_to_string(read_n_to_vec(&mut self.stream, 8).as_mut_slice());
+    self.partial_filename =
+      vec_u8_to_string(read_n_to_vec(&mut self.stream, 8).as_slice()); // Not really useful for anything
 
     // Timestamp is stored as the number of seconds since 2000, January, 1st
     let timestamp = self.stream.read_u32::<LittleEndian>().unwrap();
@@ -291,7 +294,8 @@ impl PPMParser {
     // offset = frame data offset + frame data length + sound effect flags
     //
     // <https://github.com/pbsds/hatena-server/wiki/PPM-format#sound-data-section>
-    let mut offset = 0x06A0 + self.animation_data_size + u32::from(self.frame_count);
+    let mut offset =
+      0x06A0 + self.animation_data_size + u32::from(self.frame_count);
     if offset % 2 != 0 {
       // Account for multiple-of-four padding
       offset += 4 - (offset % 4);
@@ -313,17 +317,18 @@ impl PPMParser {
   }
 
   fn frame_is_new(&mut self, index: usize) -> bool {
-    self
-      .stream
-      .set_position(u64::from(*self.offset_table.get(index).unwrap()));
+    self.stream.set_position(u64::from(*self.offset_table.get(index).unwrap()));
 
     self.stream.read_uint::<LittleEndian>(1).unwrap() >> 7 & 0x1 != 0
   }
 
-  fn read_line_types(line_types: &[u8]) -> impl Generator<Yield = (usize, u8), Return = ()> + '_ {
+  fn read_line_types(
+    line_types: &[u8],
+  ) -> impl Generator<Yield = (usize, u8), Return = ()> + '_ {
     move || {
       for index in 0..192 {
-        let line_type = line_types.get(index / 4).unwrap() >> ((index % 4) * 2) & 0x03;
+        let line_type =
+          line_types.get(index / 4).unwrap() >> ((index % 4) * 2) & 0x03;
         yield (index, line_type);
       }
     }
@@ -331,7 +336,10 @@ impl PPMParser {
 
   fn read_frame(&mut self, index: usize) -> &Vec<Vec<Vec<u8>>> {
     // Decode the previous frames if needed
-    if index != 0 && self.prev_frame_index != index - 1 && !self.frame_is_new(index) {
+    if index != 0
+      && self.prev_frame_index != index - 1
+      && !self.frame_is_new(index)
+    {
       self.read_frame(index - 1);
     }
 
@@ -342,25 +350,17 @@ impl PPMParser {
     self.layers.fill(vec![vec![0u8; 256]; 192]);
 
     // Seek to the frame offset so we can start reading
-    self
-      .stream
-      .set_position(u64::from(*self.offset_table.get(index).unwrap()));
+    self.stream.set_position(u64::from(*self.offset_table.get(index).unwrap()));
 
     // Unpack frame header flags
     let header = self.stream.read_uint::<LittleEndian>(1).unwrap();
     let is_new_frame = (header >> 7) & 0x01 != 0;
     let is_translated = (header >> 5) & 0x03 != 0;
     // If the frame is translated, we need to unpack the x and y values
-    let translation_x = if is_translated {
-      self.stream.read_i8().unwrap()
-    } else {
-      0
-    };
-    let translation_y = if is_translated {
-      self.stream.read_i8().unwrap()
-    } else {
-      0
-    };
+    let translation_x =
+      if is_translated { self.stream.read_i8().unwrap() } else { 0 };
+    let translation_y =
+      if is_translated { self.stream.read_i8().unwrap() } else { 0 };
     // Read line encoding bytes
     let line_types = vec![
       read_n_of_size_from_to_vec!(48, self, u8),
@@ -384,7 +384,8 @@ impl PPMParser {
             // pass;
           } else if line_type == 1 || line_type == 2 {
             // Compressed line
-            // If `line_type == 2`, the line starts off with all the pixels set to one
+            // If `line_type == 2`, the line starts off with all the pixels set
+            // to one
             if line_type == 2 {
               for i in 0..256 {
                 bitmap[line][i] = 1;
@@ -392,7 +393,8 @@ impl PPMParser {
             }
 
             // Unpack chunk usage
-            let mut chunk_usage = self.stream.read_u32::<byteorder::BigEndian>().unwrap();
+            let mut chunk_usage =
+              self.stream.read_u32::<byteorder::BigEndian>().unwrap();
 
             // Unpack pixel chunks
             while pixel < 256 {
@@ -442,8 +444,8 @@ impl PPMParser {
         }
 
         for x in 0..256 {
-          // Skip to the next pixel if this one falls off the left edge of the screen
-          // if x - (translation_x as usize) < 0 {
+          // Skip to the next pixel if this one falls off the left edge of the
+          // screen if x - (translation_x as usize) < 0 {
           //   continue;
           // }
           // Stop diffing this line once the right screen edge has been reached
@@ -452,10 +454,10 @@ impl PPMParser {
           }
 
           // Diff pixels with a binary XOR
-          self.layers[0][y][x] ^=
-            self.prev_layers[0][y - translation_y as usize][x - translation_x as usize];
-          self.layers[1][y][x] ^=
-            self.prev_layers[1][y - translation_y as usize][x - translation_x as usize];
+          self.layers[0][y][x] ^= self.prev_layers[0]
+            [y - translation_y as usize][x - translation_x as usize];
+          self.layers[1][y][x] ^= self.prev_layers[1]
+            [y - translation_y as usize][x - translation_x as usize];
         }
       }
     }
@@ -477,8 +479,8 @@ impl PPMParser {
 
     vec![
       if paper_colour == 1 { WHITE } else { BLACK },
-      pen.get(((header >> 1) & 0x3) as usize).unwrap().unwrap(), // Layer one colour
-      pen.get(((header >> 3) & 0x3) as usize).unwrap().unwrap(), // Layer two colour
+      pen.get(((header >> 1) & 0x3) as usize).unwrap().unwrap(), /* Layer one colour */
+      pen.get(((header >> 3) & 0x3) as usize).unwrap().unwrap(), /* Layer two colour */
     ]
   }
 
@@ -541,34 +543,37 @@ impl PPMParser {
 impl Default for PPMParser {
   fn default() -> Self {
     Self {
-      stream: Cursor::default(),
-      layers: Vec::new(),
-      prev_layers: Vec::new(),
-      prev_frame_index: Default::default(),
-      animation_data_size: Default::default(),
-      sound_data_size: Default::default(),
-      frame_count: Default::default(),
-      lock: Default::default(),
-      thumb_index: Default::default(),
-      root_author_name: String::default(),
-      parent_author_name: String::default(),
-      current_author_name: String::default(),
-      parent_author_id: String::default(),
-      current_author_id: String::default(),
-      parent_filename: String::default(),
-      current_filename: String::default(),
-      root_author_id: String::default(),
-      partial_filename: String::default(),
+      stream:                         Cursor::default(),
+      layers:                         Vec::new(),
+      prev_layers:                    Vec::new(),
+      prev_frame_index:               Default::default(),
+      animation_data_size:            Default::default(),
+      sound_data_size:                Default::default(),
+      frame_count:                    Default::default(),
+      lock:                           Default::default(),
+      thumb_index:                    Default::default(),
+      root_author_name:               String::default(),
+      parent_author_name:             String::default(),
+      current_author_name:            String::default(),
+      parent_author_id:               String::default(),
+      current_author_id:              String::default(),
+      parent_filename:                String::default(),
+      current_filename:               String::default(),
+      root_author_id:                 String::default(),
+      partial_filename:               String::default(),
       #[allow(deprecated)]
-      timestamp: TimeZone::from_utc_datetime(&Utc, &NaiveDateTime::from_timestamp(0, 0)),
-      layer_1_visible: Default::default(),
-      layer_2_visible: Default::default(),
-      loop_: Default::default(),
-      frame_speed: Default::default(),
-      bgm_speed: Default::default(),
-      framerate: Default::default(),
-      bgm_framerate: Default::default(),
-      offset_table: Vec::default(),
+      timestamp:                      TimeZone::from_utc_datetime(
+        &Utc,
+        &NaiveDateTime::from_timestamp(0, 0),
+      ),
+      layer_1_visible:                Default::default(),
+      layer_2_visible:                Default::default(),
+      loop_:                          Default::default(),
+      frame_speed:                    Default::default(),
+      bgm_speed:                      Default::default(),
+      framerate:                      Default::default(),
+      bgm_framerate:                  Default::default(),
+      offset_table:                   Vec::default(),
     }
   }
 }
