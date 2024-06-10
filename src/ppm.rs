@@ -7,28 +7,32 @@ use std::{
   collections::HashMap,
   fs,
   io::{Cursor, Read},
-  lazy::SyncLazy,
   ops::Generator,
+  sync::OnceLock,
 };
 
 use byteorder::{LittleEndian, ReadBytesExt};
-use chrono::{DateTime, NaiveDateTime, Utc};
+use chrono::{DateTime, NaiveDateTime, TimeZone, Utc};
 
 /// Flipnote speed -> frames per second
-static FRAMERATES: SyncLazy<HashMap<u8, f64>> = SyncLazy::new(|| {
-  let mut hashmap = HashMap::new();
+fn framerates() -> &'static HashMap<u8, f64> {
+  static FRAMERATES: OnceLock<HashMap<u8, f64>> = OnceLock::new();
 
-  hashmap.insert(1, 0.5);
-  hashmap.insert(2, 1.0);
-  hashmap.insert(3, 2.0);
-  hashmap.insert(4, 4.0);
-  hashmap.insert(5, 6.0);
-  hashmap.insert(6, 12.0);
-  hashmap.insert(7, 20.0);
-  hashmap.insert(8, 30.0);
+  FRAMERATES.get_or_init(|| {
+    let mut hashmap = HashMap::new();
 
-  hashmap
-});
+    hashmap.insert(1, 0.5);
+    hashmap.insert(2, 1.0);
+    hashmap.insert(3, 2.0);
+    hashmap.insert(4, 4.0);
+    hashmap.insert(5, 6.0);
+    hashmap.insert(6, 12.0);
+    hashmap.insert(7, 20.0);
+    hashmap.insert(8, 30.0);
+
+    hashmap
+  })
+}
 
 /// Thumbnail bitmap RGB colours
 // const THUMBNAIL_PALETTE: &'static [(u64, u64, u64)] = &[
@@ -209,11 +213,12 @@ impl PPMParser {
 
     // Timestamp is stored as the number of seconds since 2000, January, 1st
     let timestamp = self.stream.read_u32::<LittleEndian>().unwrap();
-    self.timestamp = DateTime::from_utc(
+    self.timestamp = TimeZone::from_utc_datetime(
       // We add 946684800 to convert this to a more common Unix timestamp,
       // which starts on 1970, January, 1st
-      NaiveDateTime::from_timestamp(i64::from(timestamp) + 946_684_800, 0),
-      Utc,
+      &Utc,
+      #[allow(deprecated)]
+      &NaiveDateTime::from_timestamp(i64::from(timestamp) + 946_684_800, 0),
     );
   }
 
@@ -303,8 +308,8 @@ impl PPMParser {
 
     self.frame_speed = 8 - frame_speed;
     self.bgm_speed = 8 - bgm_speed;
-    self.framerate = *FRAMERATES.get(&self.frame_speed).unwrap();
-    self.bgm_framerate = *FRAMERATES.get(&self.bgm_speed).unwrap();
+    self.framerate = *framerates().get(&self.frame_speed).unwrap();
+    self.bgm_framerate = *framerates().get(&self.bgm_speed).unwrap();
   }
 
   fn frame_is_new(&mut self, index: usize) -> bool {
@@ -536,33 +541,34 @@ impl PPMParser {
 impl Default for PPMParser {
   fn default() -> Self {
     Self {
-      stream:              Cursor::default(),
-      layers:              Vec::new(),
-      prev_layers:         Vec::new(),
-      prev_frame_index:    Default::default(),
+      stream: Cursor::default(),
+      layers: Vec::new(),
+      prev_layers: Vec::new(),
+      prev_frame_index: Default::default(),
       animation_data_size: Default::default(),
-      sound_data_size:     Default::default(),
-      frame_count:         Default::default(),
-      lock:                Default::default(),
-      thumb_index:         Default::default(),
-      root_author_name:    String::default(),
-      parent_author_name:  String::default(),
+      sound_data_size: Default::default(),
+      frame_count: Default::default(),
+      lock: Default::default(),
+      thumb_index: Default::default(),
+      root_author_name: String::default(),
+      parent_author_name: String::default(),
       current_author_name: String::default(),
-      parent_author_id:    String::default(),
-      current_author_id:   String::default(),
-      parent_filename:     String::default(),
-      current_filename:    String::default(),
-      root_author_id:      String::default(),
-      partial_filename:    String::default(),
-      timestamp:           DateTime::from_utc(NaiveDateTime::from_timestamp(0, 0), Utc),
-      layer_1_visible:     Default::default(),
-      layer_2_visible:     Default::default(),
-      loop_:               Default::default(),
-      frame_speed:         Default::default(),
-      bgm_speed:           Default::default(),
-      framerate:           Default::default(),
-      bgm_framerate:       Default::default(),
-      offset_table:        Vec::default(),
+      parent_author_id: String::default(),
+      current_author_id: String::default(),
+      parent_filename: String::default(),
+      current_filename: String::default(),
+      root_author_id: String::default(),
+      partial_filename: String::default(),
+      #[allow(deprecated)]
+      timestamp: TimeZone::from_utc_datetime(&Utc, &NaiveDateTime::from_timestamp(0, 0)),
+      layer_1_visible: Default::default(),
+      layer_2_visible: Default::default(),
+      loop_: Default::default(),
+      frame_speed: Default::default(),
+      bgm_speed: Default::default(),
+      framerate: Default::default(),
+      bgm_framerate: Default::default(),
+      offset_table: Vec::default(),
     }
   }
 }
