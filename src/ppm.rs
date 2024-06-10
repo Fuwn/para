@@ -8,6 +8,7 @@ use {
   chrono::{DateTime, NaiveDateTime, TimeZone, Utc},
   std::{
     collections::HashMap,
+    fmt::Write,
     fs,
     io::{Cursor, Read},
     ops::Coroutine,
@@ -90,7 +91,11 @@ fn read_n_to_vec(stream: &mut Cursor<Vec<u8>>, n: usize) -> Vec<u8> {
 }
 
 fn vec_u8_to_string(vec: &[u8]) -> String {
-  vec.iter().rev().map(|m| format!("{:02X}", m)).collect()
+  vec.iter().rev().fold(String::new(), |mut output, m| {
+    let _ = write!(output, "{m:02X}");
+
+    output
+  })
 }
 
 pub struct PPMParser {
@@ -183,7 +188,11 @@ impl PPMParser {
     // Example: F78DA8_14768882B56B8_030
     format!(
       "{}_{}_{:#03}",
-      mac.into_iter().map(|m| format!("{:02X}", m)).collect::<String>(),
+      mac.iter().fold(String::new(), |mut output, m| {
+        let _ = write!(output, "{m:02X}");
+
+        output
+      }),
       String::from_utf8(ident.as_bytes().to_vec()).unwrap(),
       edits,
     )
@@ -363,7 +372,7 @@ impl PPMParser {
     let translation_y =
       if is_translated { self.stream.read_i8().unwrap() } else { 0 };
     // Read line encoding bytes
-    let line_types = vec![
+    let line_types = [
       read_n_of_size_from_to_vec!(48, self, u8),
       read_n_of_size_from_to_vec!(48, self, u8),
     ];
@@ -471,7 +480,7 @@ impl PPMParser {
 
     let header = self.stream.read_uint::<LittleEndian>(1).unwrap();
     let paper_colour = header & 0x1;
-    let pen = vec![
+    let pen = [
       None,
       Some(if paper_colour == 1 { BLACK } else { WHITE }),
       Some(RED),
