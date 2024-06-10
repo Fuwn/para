@@ -20,11 +20,11 @@ This implementation is
 ### Speed
 
 In a 219 frame `.ppm` benchmark, running the command
-`$ para ./samplememo_02.ppm gif samplememo_02.gif` on a twelve-core,
+`$ para ./ppms/samplememo_02.ppm gif samplememo_02.gif` on a twelve-core,
 twenty-four-thread Ryzen 9 processor, para took an average of **368.35 milliseconds**,
 while ppm-parser took an average of **50.4171397 seconds**.
 
-Running the command `$ para ./samplememo_02.ppm 0 samplememo_02.png` on a twelve-core,
+Running the command `$ para ./ppms/samplememo_02.ppm 0 samplememo_02.png` on a twelve-core,
 twenty-four-thread Ryzen 9 processor, para took an average of **1.875619 milliseconds**,
 while ppm-parser took an average of **358.2232 milliseconds**.
 
@@ -102,7 +102,8 @@ Prebuilt binaries for the latest release may or may not be found
   almost as soon as the app was released.
 - Midmad and WDLMaster for identifying the adpcm sound codec used.
 - [steven](http://www.dsibrew.org/wiki/User:Steven) and
-  [yellows8](http://www.dsibrew.org/wiki/User:Yellows8) for the PPM documentation on DSiBrew.
+  [yellows8](http://www.dsibrew.org/wiki/User:Yellows8) for the PPM
+  documentation on DSiBrew.
 - [PBSDS](https://github.com/pbsds) for more PPM reverse-engineering, as well as
   writing [hatenatools](https://github.com/pbsds/Hatenatools)
 
