@@ -1,3 +1,0 @@
-[submodule "benches/ppm-parser"]
-	path = benches/ppm-parser
-	url = https://github.com/Flipnote-Collective/ppm-parser
