@@ -21,12 +21,12 @@ This implementation is
 
 In a 219 frame `.ppm` benchmark, running the command
 `$ para ./samplememo_02.ppm gif samplememo_02.gif` on a twelve-core,
-twenty-four-thread Ryzen 9 processor, para took an average of 368.35 milliseconds,
-while ppm-parser took an average of 50.4171397 seconds.
+twenty-four-thread Ryzen 9 processor, para took an average of **368.35 milliseconds**,
+while ppm-parser took an average of **50.4171397 seconds**.
 
 Running the command `$ para ./samplememo_02.ppm 0 samplememo_02.png` on a twelve-core,
-twenty-four-thread Ryzen 9 processor, para took an average of 1.875619 milliseconds,
-while ppm-parser took an average of 358.2232 milliseconds.
+twenty-four-thread Ryzen 9 processor, para took an average of **1.875619 milliseconds**,
+while ppm-parser took an average of **358.2232 milliseconds**.
 
 Rust versus Python isn't very fair, however, this benchmark shows the speed improvements
 that para brings to the table.
