@@ -10,7 +10,7 @@ use {
     collections::HashMap,
     fs,
     io::{Cursor, Read},
-    ops::Generator,
+    ops::Coroutine,
     sync::OnceLock,
   },
 };
@@ -324,7 +324,8 @@ impl PPMParser {
 
   fn read_line_types(
     line_types: &[u8],
-  ) -> impl Generator<Yield = (usize, u8), Return = ()> + '_ {
+  ) -> impl Coroutine<Yield = (usize, u8), Return = ()> + '_ {
+    #[coroutine]
     move || {
       for index in 0..192 {
         let line_type =
@@ -374,7 +375,7 @@ impl PPMParser {
 
       {
         let mut generator = Self::read_line_types(&line_types[layer]);
-        while let std::ops::GeneratorState::Yielded((line, line_type)) =
+        while let std::ops::CoroutineState::Yielded((line, line_type)) =
           std::pin::Pin::new(&mut generator).resume(())
         {
           let mut pixel = 0;
