@@ -19,13 +19,13 @@ This implementation is
 
 ### Speed
 
-In a two-hundred-forty-four frame `.ppm` benchmark running the command
-`$ para ./benchmark.ppm gif benchmark.gif` on a twelve-core,
-twenty-four-thread Ryzen 9 processor, para took an average of 566.9893 milliseconds,
+In a 219 frame `.ppm` benchmark, running the command
+`$ para ./samplememo_02.ppm gif samplememo_02.gif` on a twelve-core,
+twenty-four-thread Ryzen 9 processor, para took an average of 368.35 milliseconds,
 while ppm-parser took an average of 50.4171397 seconds.
 
-Running the command `$ para ./benchmark.ppm 0 benchmark.png` on a twelve-core,
-twenty-four-thread Ryzen 9 processor, para took an average of 8.6251 milliseconds,
+Running the command `$ para ./samplememo_02.ppm 0 samplememo_02.png` on a twelve-core,
+twenty-four-thread Ryzen 9 processor, para took an average of 1.875619 milliseconds,
 while ppm-parser took an average of 358.2232 milliseconds.
 
 Rust versus Python isn't very fair, however, this benchmark shows the speed improvements
@@ -45,7 +45,7 @@ that para brings to the table.
 #### Install from [crates.io](https://crates.io/crates/para-cli)
 
 ```shell
-$ cargo +nightly install para-cli --force
+cargo +nightly install para-cli --force
 ```
 
 #### Download from releases
@@ -58,7 +58,7 @@ to build and install Para yourself!
 #### Install from self-compile
 
 ```shell
-$ cargo +nightly install --git https://github.com/Fuwn/para --branch main
+cargo +nightly install --git https://github.com/Fuwn/para --branch main
 ```
 
 If you are building and installing yourself, you must have
