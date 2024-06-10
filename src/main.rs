@@ -40,12 +40,14 @@ fn get_image(parser: &mut PPMParser, index: usize) -> DynamicImage {
 }
 
 fn main() {
-  human_panic::setup_panic!(Metadata {
-    version:  env!("CARGO_PKG_VERSION").into(),
-    name:     env!("CARGO_PKG_NAME").into(),
-    authors:  env!("CARGO_PKG_AUTHORS").into(),
-    homepage: env!("CARGO_PKG_HOMEPAGE").into(),
-  });
+  human_panic::setup_panic!(
+    human_panic::Metadata::new(
+      env!("CARGO_PKG_NAME"),
+      env!("CARGO_PKG_VERSION")
+    )
+    .authors(env!("CARGO_PKG_AUTHORS"))
+    .homepage(env!("CARGO_PKG_HOMEPAGE"))
+  );
 
   let args = std::env::args().collect::<Vec<_>>();
 
