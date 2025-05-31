@@ -2,13 +2,19 @@
 name = "para-cli"
 version = "0.1.0"
 authors = ["Fuwn <contact@fuwn.me>"]
-edition = "2021"
+edition = "2024"
 description = "Decoder and utility for the Flipnote Studios .ppm animation format."
 readme = "README.md"
 homepage = "https://github.com/Usugata/para"
 repository = "https://github.com/Usugata/para"
 license = "MIT"
-keywords = ["ppm", "nintendo-hacking", "flipnote", "flipnotestudio", "nintendo-dsi"]
+keywords = [
+  "ppm",
+  "nintendo-hacking",
+  "flipnote",
+  "flipnotestudio",
+  "nintendo-dsi",
+]
 categories = ["encoding"]
 
 [[bin]]

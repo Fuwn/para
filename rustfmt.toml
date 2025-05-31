@@ -1,4 +1,4 @@
-edition = "2021"
+edition = "2024"
 enum_discrim_align_threshold = 40
 # error_on_line_overflow = true
 # error_on_unformatted = true
@@ -20,5 +20,5 @@ tab_spaces = 2
 use_field_init_shorthand = true
 use_small_heuristics = "Max"
 use_try_shorthand = true
-version = "Two"
+style_edition = "2024"
 wrap_comments = true
