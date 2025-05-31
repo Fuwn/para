@@ -19,3 +19,5 @@ Cargo.lock
 /*.json
 /*.png
 
+# Fuwn/justfiles
+*.just
