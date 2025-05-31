@@ -2,12 +2,13 @@
 
 ![](assets/para.png)
 
-[![Crate](https://img.shields.io/crates/v/para-cli.svg)](https://crates.io/crates/para-cli)
-[![Build Status](https://github.com/Fuwn/para/actions/workflows/rust.yaml/badge.svg?branch=main)](https://github.com/Fuwn/para/actions/workflows/rust.yaml)
-
 ## What?
 
 A decoder and utility for the Flipnote Studios `.ppm` animation format.
+
+<br />
+
+<p align="center"><img src="assets/demo.gif" width="65%"></center>
 
 ## Why this implementation over [the original](https://github.com/Flipnote-Collective/ppm-parser)?
 
