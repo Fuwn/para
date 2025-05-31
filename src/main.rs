@@ -80,23 +80,26 @@ fn main() {
 
   match index.as_str() {
     "gif" => {
-      let frame_duration = (1.0 / parser.get_framerate()) * 100.0;
+      #[allow(clippy::cast_sign_loss, clippy::cast_possible_truncation)]
+      let frame_delay = ((1.0 / parser.get_framerate()) * 100.0) as u16;
       let frames = (0..parser.get_frame_count())
         .map(|i| get_image(&mut parser, i as usize))
         .collect::<Vec<DynamicImage>>();
       let mut file_out = std::fs::File::create(out_path).unwrap();
-      let mut gif_encoder = image::codecs::gif::GifEncoder::new_with_speed(
-        &mut file_out,
-        #[allow(clippy::cast_possible_truncation)]
-        {
-          frame_duration as i32
-        },
-      );
+      let mut gif_encoder = image::codecs::gif::GifEncoder::new(&mut file_out);
+
       for frame in frames {
-        gif_encoder
-          .encode_frame(image::Frame::new(frame.into_rgba8()))
-          .unwrap();
+        let rgba_frame = frame.into_rgba8();
+        let gif_frame = image::Frame::from_parts(
+          rgba_frame,
+          0,
+          0,
+          image::Delay::from_numer_denom_ms(u32::from(frame_delay) * 10, 1),
+        );
+
+        gif_encoder.encode_frame(gif_frame).unwrap();
       }
+
       gif_encoder.set_repeat(image::codecs::gif::Repeat::Infinite).unwrap();
     }
     "thumb" => {
